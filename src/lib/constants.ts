@@ -1,10 +1,10 @@
 export const SERVICOS = [
-  { nome: 'Cabelo', preco: 35, icone: '✂️', descricao: 'Corte masculino' },
-  { nome: 'Barba', preco: 25, icone: '🪒', descricao: 'Barba completa' },
-  { nome: 'Meia Barba', preco: 20, icone: '🧔', descricao: 'Aparar e modelar' },
-  { nome: 'Raspagem', preco: 30, icone: '⚡', descricao: 'Raspagem total' },
-  { nome: 'Combo Cabelo + Barba', preco: 55, icone: '💈', descricao: 'Cabelo e barba' },
-  { nome: 'Pezinho', preco: 15, icone: '✨', descricao: 'Acabamento pezinho' },
+  { nome: 'Cabelo', preco: 35, duracao: '60min', icone: '✂️', descricao: 'Corte masculino clássico ou moderno' },
+  { nome: 'Barba', preco: 25, duracao: '45min', icone: '🪒', descricao: 'Barba completa com toalha quente' },
+  { nome: 'Meia Barba', preco: 20, duracao: '30min', icone: '🧔', descricao: 'Aparar e modelar a barba' },
+  { nome: 'Raspagem', preco: 30, duracao: '30min', icone: '⚡', descricao: 'Raspagem total com navalha' },
+  { nome: 'Combo Cabelo + Barba', preco: 55, duracao: '90min', icone: '💈', descricao: 'Cabelo e barba completos' },
+  { nome: 'Pezinho', preco: 15, duracao: '15min', icone: '✨', descricao: 'Acabamento e alinhamento' },
 ]
 
 export const BARBEIROS = [

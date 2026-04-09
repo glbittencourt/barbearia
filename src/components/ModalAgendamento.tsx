@@ -1,26 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { X, ChevronLeft, CheckCircle2, Loader2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { X, ChevronLeft, ChevronRight, CheckCircle2, Loader2, User, Scissors, Calendar, Clock } from 'lucide-react'
 import { getSupabase } from '@/lib/supabase'
-import {
-  BARBEIROS,
-  gerarHorarios,
-  gerarProximos7Dias,
-  formatarTelefone,
-  formatarDataExibicao,
-} from '@/lib/constants'
+import { BARBEIROS, gerarHorarios, gerarProximos7Dias, formatarTelefone, formatarDataExibicao } from '@/lib/constants'
 import { AvatarBarbeiro } from './AvatarBarbeiro'
 
 interface ModalAgendamentoProps {
-  servico: { nome: string; preco: number }
+  servico: { nome: string; preco: number; duracao: string }
   onClose: () => void
 }
 
-type Etapa = 1 | 2 | 3 | 4
-
 export function ModalAgendamento({ servico, onClose }: ModalAgendamentoProps) {
-  const [etapa, setEtapa] = useState<Etapa>(1)
   const [dataSelecionada, setDataSelecionada] = useState('')
   const [barbeiroSelecionado, setBarbeiroSelecionado] = useState('')
   const [horarioSelecionado, setHorarioSelecionado] = useState('')
@@ -32,15 +23,24 @@ export function ModalAgendamento({ servico, onClose }: ModalAgendamentoProps) {
   const [sucesso, setSucesso] = useState(false)
   const [erro, setErro] = useState('')
 
+  // Carrossel de datas
+  const [offsetDatas, setOffsetDatas] = useState(0)
+  const DATAS_VISIVEIS = 5
   const dias = gerarProximos7Dias()
-  const todosHorarios = gerarHorarios()
+  const diasVisiveis = dias.slice(offsetDatas, offsetDatas + DATAS_VISIVEIS)
 
+  const todosHorarios = gerarHorarios()
+  const horariosRef = useRef<HTMLDivElement>(null)
+  const resumoRef = useRef<HTMLDivElement>(null)
+
+  // Busca horários ocupados quando barbeiro + data estiverem selecionados
   useEffect(() => {
-    if (dataSelecionada && barbeiroSelecionado && etapa === 3) {
+    if (dataSelecionada && barbeiroSelecionado) {
+      setHorarioSelecionado('')
       buscarHorariosOcupados()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataSelecionada, barbeiroSelecionado, etapa])
+  }, [dataSelecionada, barbeiroSelecionado])
 
   async function buscarHorariosOcupados() {
     setCarregandoHorarios(true)
@@ -55,7 +55,6 @@ export function ModalAgendamento({ servico, onClose }: ModalAgendamentoProps) {
         console.error('Supabase erro ao buscar horários:', error)
         setHorariosOcupados([])
       } else {
-        // Normaliza "HH:MM:SS" → "HH:MM" (formato que o PostgreSQL TIME retorna)
         setHorariosOcupados(
           (data || []).map((r: { horario: string }) => r.horario.slice(0, 5))
         )
@@ -65,6 +64,10 @@ export function ModalAgendamento({ servico, onClose }: ModalAgendamentoProps) {
       setHorariosOcupados([])
     } finally {
       setCarregandoHorarios(false)
+      // Scroll suave até a seção de horários
+      setTimeout(() => {
+        horariosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }, 100)
     }
   }
 
@@ -72,22 +75,18 @@ export function ModalAgendamento({ servico, onClose }: ModalAgendamentoProps) {
     (h) => !horariosOcupados.includes(h)
   )
 
-  function avancar() {
-    if (etapa < 4) setEtapa((etapa + 1) as Etapa)
-  }
-
-  function voltar() {
-    if (etapa > 1) setEtapa((etapa - 1) as Etapa)
-  }
-
-  function podeAvancar() {
-    if (etapa === 1) return !!dataSelecionada
-    if (etapa === 2) return !!barbeiroSelecionado
-    if (etapa === 3) return !!horarioSelecionado
-    return false
+  function handleSelecionarHorario(h: string) {
+    setHorarioSelecionado(h)
+    setTimeout(() => {
+      resumoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }, 100)
   }
 
   async function handleAgendar() {
+    if (!dataSelecionada || !barbeiroSelecionado || !horarioSelecionado) {
+      setErro('Selecione data, profissional e horário.')
+      return
+    }
     if (!clienteNome.trim() || !clienteTelefone.trim()) {
       setErro('Preencha seu nome e telefone.')
       return
@@ -129,69 +128,44 @@ export function ModalAgendamento({ servico, onClose }: ModalAgendamentoProps) {
     }
   }
 
-  const titulos: Record<Etapa, string> = {
-    1: 'Escolha a data',
-    2: 'Escolha o barbeiro',
-    3: 'Escolha o horário',
-    4: 'Confirmar agendamento',
-  }
+  const podeAgendar =
+    dataSelecionada &&
+    barbeiroSelecionado &&
+    horarioSelecionado &&
+    clienteNome.trim() &&
+    clienteTelefone.trim()
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative w-full sm:max-w-md bg-[#f0ede6] rounded-t-3xl sm:rounded-2xl shadow-2xl z-10 max-h-[92vh] flex flex-col">
-        {/* Header */}
-        <div className="bg-[#2d3b2d] rounded-t-3xl sm:rounded-t-2xl px-5 py-4 flex-shrink-0">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              {etapa > 1 && !sucesso && (
-                <button
-                  onClick={voltar}
-                  className="text-white/70 hover:text-white transition-colors p-1 -ml-1"
-                >
-                  <ChevronLeft size={22} />
-                </button>
-              )}
-              <div>
-                <p className="text-white/60 text-xs">{servico.nome} · R${servico.preco}</p>
-                <h2 className="text-white font-semibold text-base">
-                  {sucesso ? 'Agendamento confirmado!' : titulos[etapa]}
-                </h2>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-white/60 hover:text-white transition-colors p-1"
-            >
-              <X size={22} />
-            </button>
-          </div>
+      <div className="relative w-full sm:max-w-md bg-[#eee8de] rounded-t-3xl sm:rounded-2xl shadow-2xl z-10 max-h-[94vh] flex flex-col">
 
-          {/* Progress bar */}
-          {!sucesso && (
-            <div className="flex gap-1.5">
-              {[1, 2, 3, 4].map((n) => (
-                <div
-                  key={n}
-                  className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                    n <= etapa ? 'bg-[#7c1c2e]' : 'bg-white/20'
-                  }`}
-                />
-              ))}
+        {/* Header fixo */}
+        <div className="bg-[#2d3b2d] rounded-t-3xl sm:rounded-t-2xl px-5 py-4 flex items-start justify-between flex-shrink-0">
+          <div>
+            <p className="text-white/50 text-xs uppercase tracking-wider mb-0.5">Agendamento</p>
+            <h2 className="text-white font-bold text-lg leading-tight">{servico.nome}</h2>
+            <div className="flex items-center gap-3 mt-1">
+              <span className="text-[#e8a87c] font-bold text-sm">
+                R$ {servico.preco.toFixed(2).replace('.', ',')}
+              </span>
+              <span className="text-white/40 text-xs flex items-center gap-1">
+                <Clock size={11} /> {servico.duracao}
+              </span>
             </div>
-          )}
+          </div>
+          <button onClick={onClose} className="text-white/50 hover:text-white transition-colors p-1 -mr-1">
+            <X size={22} />
+          </button>
         </div>
 
-        {/* Content */}
-        <div className="overflow-y-auto flex-1 p-5">
+        {/* Conteúdo scrollável */}
+        <div className="overflow-y-auto flex-1">
           {sucesso ? (
-            <EtapaSucesso
+            <TelaSucesso
               servico={servico.nome}
               barbeiro={barbeiroSelecionado}
               data={dataSelecionada}
@@ -200,286 +174,222 @@ export function ModalAgendamento({ servico, onClose }: ModalAgendamentoProps) {
               onClose={onClose}
             />
           ) : (
-            <>
-              {etapa === 1 && (
-                <EtapaData
-                  dias={dias}
-                  selecionado={dataSelecionada}
-                  onSelect={setDataSelecionada}
-                />
+            <div className="px-5 py-5 space-y-6">
+
+              {/* ── Seção 1: Data ── */}
+              <div>
+                <p className="text-[#2d3b2d]/60 text-xs font-bold uppercase tracking-wider mb-3">
+                  Selecione o dia da semana desejado:
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setOffsetDatas(Math.max(0, offsetDatas - 1))}
+                    disabled={offsetDatas === 0}
+                    className="p-1.5 rounded-lg border border-[#c8bfb0] bg-white disabled:opacity-30 hover:bg-[#f0ede6] transition-colors flex-shrink-0"
+                  >
+                    <ChevronLeft size={16} className="text-[#2d3b2d]" />
+                  </button>
+
+                  <div className="flex gap-1.5 flex-1 overflow-hidden">
+                    {diasVisiveis.map((d) => {
+                      const [diaNum, mesNum] = d.label.split(' ')[0].split('/')
+                      const diaSemana = d.label.split(' ')[1]
+                      return (
+                        <button
+                          key={d.data}
+                          onClick={() => setDataSelecionada(d.data)}
+                          className={`flex-1 flex flex-col items-center py-2 px-1 rounded-xl border-2 text-xs font-semibold transition-all duration-150 ${
+                            dataSelecionada === d.data
+                              ? 'bg-[#7c1c2e] border-[#7c1c2e] text-white shadow-md'
+                              : 'bg-white border-[#d5cfc4] text-[#2d3b2d] hover:border-[#7c1c2e]'
+                          }`}
+                        >
+                          <span className="text-[10px] opacity-75">{diaNum}/{mesNum}</span>
+                          <span>{diaSemana}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  <button
+                    onClick={() => setOffsetDatas(Math.min(dias.length - DATAS_VISIVEIS, offsetDatas + 1))}
+                    disabled={offsetDatas >= dias.length - DATAS_VISIVEIS}
+                    className="p-1.5 rounded-lg border border-[#c8bfb0] bg-white disabled:opacity-30 hover:bg-[#f0ede6] transition-colors flex-shrink-0"
+                  >
+                    <ChevronRight size={16} className="text-[#2d3b2d]" />
+                  </button>
+                </div>
+              </div>
+
+              {/* ── Seção 2: Barbeiro ── */}
+              {dataSelecionada && (
+                <div>
+                  <p className="text-[#2d3b2d]/60 text-xs font-bold uppercase tracking-wider mb-3">
+                    Selecione o profissional:
+                  </p>
+                  <div className="flex gap-3 justify-around">
+                    {BARBEIROS.map((b) => (
+                      <button
+                        key={b.nome}
+                        onClick={() => setBarbeiroSelecionado(b.nome)}
+                        className={`flex flex-col items-center gap-1.5 flex-1 py-2 rounded-xl border-2 transition-all duration-150 ${
+                          barbeiroSelecionado === b.nome
+                            ? 'border-[#7c1c2e] bg-[#7c1c2e]/10'
+                            : 'border-transparent hover:border-[#7c1c2e]/40'
+                        }`}
+                      >
+                        <div
+                          className={`rounded-full overflow-hidden border-2 transition-all ${
+                            barbeiroSelecionado === b.nome
+                              ? 'border-[#7c1c2e] shadow-md'
+                              : 'border-[#d5cfc4]'
+                          }`}
+                        >
+                          <AvatarBarbeiro nome={b.nome} size={52} />
+                        </div>
+                        <span
+                          className={`text-xs font-semibold ${
+                            barbeiroSelecionado === b.nome ? 'text-[#7c1c2e]' : 'text-[#2d3b2d]'
+                          }`}
+                        >
+                          {b.nome}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )}
-              {etapa === 2 && (
-                <EtapaBarbeiro
-                  selecionado={barbeiroSelecionado}
-                  onSelect={setBarbeiroSelecionado}
-                />
+
+              {/* ── Seção 3: Horários ── */}
+              {dataSelecionada && barbeiroSelecionado && (
+                <div ref={horariosRef}>
+                  <p className="text-[#2d3b2d]/60 text-xs font-bold uppercase tracking-wider mb-3">
+                    Escolha um Horário Disponível:
+                  </p>
+                  {carregandoHorarios ? (
+                    <div className="flex justify-center py-6">
+                      <Loader2 className="animate-spin text-[#7c1c2e]" size={28} />
+                    </div>
+                  ) : horariosDisponiveis.length === 0 ? (
+                    <div className="text-center py-6 text-[#2d3b2d]/50 text-sm">
+                      <p>Sem horários disponíveis neste dia para este profissional.</p>
+                      <p className="text-xs mt-1">Tente outra data ou profissional.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-4 gap-2">
+                      {horariosDisponiveis.map((h) => (
+                        <button
+                          key={h}
+                          onClick={() => handleSelecionarHorario(h)}
+                          className={`py-2 rounded-xl border-2 font-semibold text-sm transition-all duration-150 ${
+                            horarioSelecionado === h
+                              ? 'bg-[#7c1c2e] border-[#7c1c2e] text-white shadow-md'
+                              : 'bg-white border-[#d5cfc4] text-[#2d3b2d] hover:border-[#7c1c2e]'
+                          }`}
+                        >
+                          {h}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
-              {etapa === 3 && (
-                <EtapaHorario
-                  horarios={horariosDisponiveis}
-                  selecionado={horarioSelecionado}
-                  onSelect={setHorarioSelecionado}
-                  carregando={carregandoHorarios}
-                />
-              )}
-              {etapa === 4 && (
-                <EtapaDados
-                  servico={servico.nome}
-                  preco={servico.preco}
-                  barbeiro={barbeiroSelecionado}
-                  data={dataSelecionada}
-                  horario={horarioSelecionado}
-                  nome={clienteNome}
-                  telefone={clienteTelefone}
-                  onNomeChange={setClienteNome}
-                  onTelefoneChange={setClienteTelefone}
-                  erro={erro}
-                />
-              )}
-            </>
+
+              {/* ── Seção 4: Resumo + Dados ── */}
+              <div ref={resumoRef}>
+                <p className="text-[#2d3b2d]/60 text-xs font-bold uppercase tracking-wider mb-3">
+                  Resumo
+                </p>
+                <div className="bg-[#2d3b2d] rounded-xl p-4 text-white text-sm space-y-1.5 mb-4">
+                  <div className="flex items-center gap-2">
+                    <Scissors size={14} className="text-white/50 flex-shrink-0" />
+                    <span className={dataSelecionada ? 'font-semibold' : 'text-white/30 italic'}>
+                      {servico.nome}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <User size={14} className="text-white/50 flex-shrink-0" />
+                    <span className={barbeiroSelecionado ? 'font-semibold' : 'text-white/30 italic text-xs'}>
+                      {barbeiroSelecionado ? `Profissional ${barbeiroSelecionado}` : 'Selecione o profissional'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar size={14} className="text-white/50 flex-shrink-0" />
+                    <span className={dataSelecionada ? 'font-semibold' : 'text-white/30 italic text-xs'}>
+                      {dataSelecionada ? formatarDataExibicao(dataSelecionada) : 'Selecione a data'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock size={14} className="text-white/50 flex-shrink-0" />
+                    <span className={horarioSelecionado ? 'font-semibold' : 'text-white/30 italic text-xs'}>
+                      {horarioSelecionado || 'Selecione o horário'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Campos */}
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[#2d3b2d]/60 text-xs font-semibold block mb-1.5">
+                        Nome e sobrenome:
+                      </label>
+                      <input
+                        type="text"
+                        value={clienteNome}
+                        onChange={(e) => setClienteNome(e.target.value)}
+                        placeholder="Nome e sobrenome"
+                        className="w-full px-3 py-2.5 rounded-xl border-2 border-[#d5cfc4] bg-white text-[#2d3b2d] placeholder-[#2d3b2d]/30 focus:outline-none focus:border-[#7c1c2e] text-sm transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[#2d3b2d]/60 text-xs font-semibold block mb-1.5">
+                        Telefone:
+                      </label>
+                      <input
+                        type="tel"
+                        value={clienteTelefone}
+                        onChange={(e) => setClienteTelefone(formatarTelefone(e.target.value))}
+                        placeholder="(99) 99999-9999"
+                        className="w-full px-3 py-2.5 rounded-xl border-2 border-[#d5cfc4] bg-white text-[#2d3b2d] placeholder-[#2d3b2d]/30 focus:outline-none focus:border-[#7c1c2e] text-sm transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {erro && (
+                    <p className="text-red-600 text-xs font-medium">{erro}</p>
+                  )}
+
+                  <button
+                    onClick={handleAgendar}
+                    disabled={agendando || !podeAgendar}
+                    className={`w-full py-3.5 rounded-xl font-bold text-white text-base transition-all duration-200 flex items-center justify-center gap-2 ${
+                      podeAgendar && !agendando
+                        ? 'bg-[#7c1c2e] hover:bg-[#9b2239] active:scale-[0.98]'
+                        : 'bg-[#7c1c2e]/30 cursor-not-allowed'
+                    }`}
+                  >
+                    {agendando ? (
+                      <>
+                        <Loader2 size={20} className="animate-spin" />
+                        Agendando...
+                      </>
+                    ) : (
+                      'AGENDAR'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
-
-        {/* Footer button */}
-        {!sucesso && (
-          <div className="p-5 pt-2 flex-shrink-0 bg-[#f0ede6] rounded-b-3xl sm:rounded-b-2xl border-t border-[#d5cfc4]">
-            {etapa < 4 ? (
-              <button
-                onClick={avancar}
-                disabled={!podeAvancar()}
-                className={`w-full py-3.5 rounded-xl font-bold text-white text-base transition-all duration-200 ${
-                  podeAvancar()
-                    ? 'bg-[#7c1c2e] hover:bg-[#9b2239] active:scale-[0.98]'
-                    : 'bg-[#7c1c2e]/30 cursor-not-allowed'
-                }`}
-              >
-                Continuar
-              </button>
-            ) : (
-              <button
-                onClick={handleAgendar}
-                disabled={agendando}
-                className="w-full py-3.5 rounded-xl font-bold text-white text-base bg-[#7c1c2e] hover:bg-[#9b2239] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70"
-              >
-                {agendando ? (
-                  <>
-                    <Loader2 size={20} className="animate-spin" />
-                    Agendando...
-                  </>
-                ) : (
-                  'AGENDAR'
-                )}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-/* ─── Etapa 1: Data ─────────────────────────────────────────────────────── */
-function EtapaData({
-  dias,
-  selecionado,
-  onSelect,
-}: {
-  dias: { data: string; label: string }[]
-  selecionado: string
-  onSelect: (d: string) => void
-}) {
-  return (
-    <div className="grid grid-cols-2 gap-2.5">
-      {dias.map((d) => (
-        <button
-          key={d.data}
-          onClick={() => onSelect(d.data)}
-          className={`py-3 px-4 rounded-xl border-2 font-medium text-sm transition-all duration-150 ${
-            selecionado === d.data
-              ? 'bg-[#7c1c2e] border-[#7c1c2e] text-white shadow-md'
-              : 'bg-white border-[#d5cfc4] text-[#2d3b2d] hover:border-[#7c1c2e] hover:bg-[#7c1c2e]/5'
-          }`}
-        >
-          {d.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-/* ─── Etapa 2: Barbeiro ─────────────────────────────────────────────────── */
-function EtapaBarbeiro({
-  selecionado,
-  onSelect,
-}: {
-  selecionado: string
-  onSelect: (b: string) => void
-}) {
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      {BARBEIROS.map((b) => (
-        <button
-          key={b.nome}
-          onClick={() => onSelect(b.nome)}
-          className={`flex flex-col items-center gap-2.5 py-4 px-3 rounded-xl border-2 transition-all duration-150 ${
-            selecionado === b.nome
-              ? 'bg-[#7c1c2e]/10 border-[#7c1c2e] shadow-md'
-              : 'bg-white border-[#d5cfc4] hover:border-[#7c1c2e] hover:bg-[#7c1c2e]/5'
-          }`}
-        >
-          <AvatarBarbeiro nome={b.nome} size={64} />
-          <span
-            className={`font-semibold text-sm ${
-              selecionado === b.nome ? 'text-[#7c1c2e]' : 'text-[#2d3b2d]'
-            }`}
-          >
-            {b.nome}
-          </span>
-        </button>
-      ))}
-    </div>
-  )
-}
-
-/* ─── Etapa 3: Horário ──────────────────────────────────────────────────── */
-function EtapaHorario({
-  horarios,
-  selecionado,
-  onSelect,
-  carregando,
-}: {
-  horarios: string[]
-  selecionado: string
-  onSelect: (h: string) => void
-  carregando: boolean
-}) {
-  if (carregando) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="animate-spin text-[#7c1c2e]" size={32} />
-      </div>
-    )
-  }
-
-  if (horarios.length === 0) {
-    return (
-      <div className="text-center py-10">
-        <p className="text-[#2d3b2d]/60 font-medium">
-          Não há horários disponíveis para este barbeiro neste dia.
-        </p>
-        <p className="text-[#2d3b2d]/40 text-sm mt-1">
-          Tente outro dia ou barbeiro.
-        </p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="grid grid-cols-3 gap-2">
-      {horarios.map((h) => (
-        <button
-          key={h}
-          onClick={() => onSelect(h)}
-          className={`py-2.5 rounded-xl border-2 font-semibold text-sm transition-all duration-150 ${
-            selecionado === h
-              ? 'bg-[#7c1c2e] border-[#7c1c2e] text-white shadow-md'
-              : 'bg-white border-[#d5cfc4] text-[#2d3b2d] hover:border-[#7c1c2e] hover:bg-[#7c1c2e]/5'
-          }`}
-        >
-          {h}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-/* ─── Etapa 4: Dados do cliente ─────────────────────────────────────────── */
-function EtapaDados({
-  servico,
-  preco,
-  barbeiro,
-  data,
-  horario,
-  nome,
-  telefone,
-  onNomeChange,
-  onTelefoneChange,
-  erro,
-}: {
-  servico: string
-  preco: number
-  barbeiro: string
-  data: string
-  horario: string
-  nome: string
-  telefone: string
-  onNomeChange: (v: string) => void
-  onTelefoneChange: (v: string) => void
-  erro: string
-}) {
-  return (
-    <div className="flex flex-col gap-4">
-      {/* Resumo */}
-      <div className="bg-[#2d3b2d] rounded-xl p-4 text-white text-sm space-y-1.5">
-        <div className="flex justify-between">
-          <span className="text-white/60">Serviço</span>
-          <span className="font-semibold">{servico}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-white/60">Valor</span>
-          <span className="font-semibold text-[#e8a87c]">R$ {preco}</span>
-        </div>
-        <div className="border-t border-white/10 pt-1.5 mt-1.5" />
-        <div className="flex justify-between">
-          <span className="text-white/60">Barbeiro</span>
-          <span className="font-semibold">{barbeiro}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-white/60">Data</span>
-          <span className="font-semibold">{formatarDataExibicao(data)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-white/60">Horário</span>
-          <span className="font-semibold">{horario}</span>
-        </div>
-      </div>
-
-      {/* Campos */}
-      <div className="space-y-3">
-        <div>
-          <label className="text-[#2d3b2d] font-semibold text-sm block mb-1.5">
-            Nome completo
-          </label>
-          <input
-            type="text"
-            value={nome}
-            onChange={(e) => onNomeChange(e.target.value)}
-            placeholder="Seu nome e sobrenome"
-            className="w-full px-4 py-3 rounded-xl border-2 border-[#d5cfc4] bg-white text-[#2d3b2d] placeholder-[#2d3b2d]/30 focus:outline-none focus:border-[#7c1c2e] transition-colors text-sm"
-          />
-        </div>
-        <div>
-          <label className="text-[#2d3b2d] font-semibold text-sm block mb-1.5">
-            Telefone / WhatsApp
-          </label>
-          <input
-            type="tel"
-            value={telefone}
-            onChange={(e) => onTelefoneChange(formatarTelefone(e.target.value))}
-            placeholder="(11) 99999-9999"
-            className="w-full px-4 py-3 rounded-xl border-2 border-[#d5cfc4] bg-white text-[#2d3b2d] placeholder-[#2d3b2d]/30 focus:outline-none focus:border-[#7c1c2e] transition-colors text-sm"
-          />
-        </div>
-        {erro && (
-          <p className="text-red-600 text-sm font-medium">{erro}</p>
-        )}
       </div>
     </div>
   )
 }
 
 /* ─── Tela de Sucesso ───────────────────────────────────────────────────── */
-function EtapaSucesso({
+function TelaSucesso({
   servico,
   barbeiro,
   data,
@@ -495,7 +405,7 @@ function EtapaSucesso({
   onClose: () => void
 }) {
   return (
-    <div className="flex flex-col items-center text-center py-4 gap-4">
+    <div className="flex flex-col items-center text-center px-5 py-8 gap-4">
       <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
         <CheckCircle2 size={36} className="text-green-600" />
       </div>
@@ -507,23 +417,23 @@ function EtapaSucesso({
       </div>
       <div className="w-full bg-[#2d3b2d] rounded-xl p-4 text-white text-sm space-y-1.5 text-left">
         <div className="flex justify-between">
-          <span className="text-white/60">Serviço</span>
+          <span className="text-white/50">Serviço</span>
           <span className="font-semibold">{servico}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-white/60">Barbeiro</span>
+          <span className="text-white/50">Barbeiro</span>
           <span className="font-semibold">{barbeiro}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-white/60">Data</span>
+          <span className="text-white/50">Data</span>
           <span className="font-semibold">{formatarDataExibicao(data)}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-white/60">Horário</span>
+          <span className="text-white/50">Horário</span>
           <span className="font-semibold">{horario}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-white/60">Cliente</span>
+          <span className="text-white/50">Cliente</span>
           <span className="font-semibold">{cliente}</span>
         </div>
       </div>
