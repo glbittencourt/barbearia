@@ -223,7 +223,8 @@ export function ModalAgendamento({ servico, onClose }: ModalAgendamentoProps) {
 
               {/* ── Seção 2: Barbeiro ── */}
               {dataSelecionada && (
-                <div>
+                <div key={`barbeiro-${dataSelecionada}`} className="animate-fade-slide">
+                  <Divisor />
                   <p className="text-[#2d3b2d]/60 text-xs font-bold uppercase tracking-wider mb-3">
                     Selecione o profissional:
                   </p>
@@ -232,23 +233,23 @@ export function ModalAgendamento({ servico, onClose }: ModalAgendamentoProps) {
                       <button
                         key={b.nome}
                         onClick={() => setBarbeiroSelecionado(b.nome)}
-                        className={`flex flex-col items-center gap-1.5 flex-1 py-2 rounded-xl border-2 transition-all duration-150 ${
+                        className={`flex flex-col items-center gap-1.5 flex-1 py-2 rounded-xl border-2 transition-all duration-200 ${
                           barbeiroSelecionado === b.nome
                             ? 'border-[#7c1c2e] bg-[#7c1c2e]/10'
                             : 'border-transparent hover:border-[#7c1c2e]/40'
                         }`}
                       >
                         <div
-                          className={`rounded-full overflow-hidden border-2 transition-all ${
+                          className={`rounded-full overflow-hidden border-2 transition-all duration-200 ${
                             barbeiroSelecionado === b.nome
-                              ? 'border-[#7c1c2e] shadow-md'
+                              ? 'border-[#7c1c2e] shadow-md scale-110'
                               : 'border-[#d5cfc4]'
                           }`}
                         >
                           <AvatarBarbeiro nome={b.nome} size={52} />
                         </div>
                         <span
-                          className={`text-xs font-semibold ${
+                          className={`text-xs font-semibold transition-colors ${
                             barbeiroSelecionado === b.nome ? 'text-[#7c1c2e]' : 'text-[#2d3b2d]'
                           }`}
                         >
@@ -262,7 +263,8 @@ export function ModalAgendamento({ servico, onClose }: ModalAgendamentoProps) {
 
               {/* ── Seção 3: Horários ── */}
               {dataSelecionada && barbeiroSelecionado && (
-                <div ref={horariosRef}>
+                <div key={`horarios-${dataSelecionada}-${barbeiroSelecionado}`} ref={horariosRef} className="animate-fade-slide">
+                  <Divisor />
                   <p className="text-[#2d3b2d]/60 text-xs font-bold uppercase tracking-wider mb-3">
                     Escolha um Horário Disponível:
                   </p>
@@ -283,7 +285,7 @@ export function ModalAgendamento({ servico, onClose }: ModalAgendamentoProps) {
                           onClick={() => handleSelecionarHorario(h)}
                           className={`py-2 rounded-xl border-2 font-semibold text-sm transition-all duration-150 ${
                             horarioSelecionado === h
-                              ? 'bg-[#7c1c2e] border-[#7c1c2e] text-white shadow-md'
+                              ? 'bg-[#7c1c2e] border-[#7c1c2e] text-white shadow-md scale-105'
                               : 'bg-white border-[#d5cfc4] text-[#2d3b2d] hover:border-[#7c1c2e]'
                           }`}
                         >
@@ -296,96 +298,96 @@ export function ModalAgendamento({ servico, onClose }: ModalAgendamentoProps) {
               )}
 
               {/* ── Seção 4: Resumo + Dados ── */}
-              <div ref={resumoRef}>
-                <p className="text-[#2d3b2d]/60 text-xs font-bold uppercase tracking-wider mb-3">
-                  Resumo
-                </p>
-                <div className="bg-[#2d3b2d] rounded-xl p-4 text-white text-sm space-y-1.5 mb-4">
-                  <div className="flex items-center gap-2">
-                    <Scissors size={14} className="text-white/50 flex-shrink-0" />
-                    <span className={dataSelecionada ? 'font-semibold' : 'text-white/30 italic'}>
-                      {servico.nome}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <User size={14} className="text-white/50 flex-shrink-0" />
-                    <span className={barbeiroSelecionado ? 'font-semibold' : 'text-white/30 italic text-xs'}>
-                      {barbeiroSelecionado ? `Profissional ${barbeiroSelecionado}` : 'Selecione o profissional'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar size={14} className="text-white/50 flex-shrink-0" />
-                    <span className={dataSelecionada ? 'font-semibold' : 'text-white/30 italic text-xs'}>
-                      {dataSelecionada ? formatarDataExibicao(dataSelecionada) : 'Selecione a data'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock size={14} className="text-white/50 flex-shrink-0" />
-                    <span className={horarioSelecionado ? 'font-semibold' : 'text-white/30 italic text-xs'}>
-                      {horarioSelecionado || 'Selecione o horário'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Campos */}
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div>
-                      <label className="text-[#2d3b2d]/60 text-xs font-semibold block mb-1.5">
-                        Nome e sobrenome:
-                      </label>
-                      <input
-                        type="text"
-                        value={clienteNome}
-                        onChange={(e) => setClienteNome(e.target.value)}
-                        placeholder="Nome e sobrenome"
-                        className="w-full px-3 py-2.5 rounded-xl border-2 border-[#d5cfc4] bg-white text-[#2d3b2d] placeholder-[#2d3b2d]/30 focus:outline-none focus:border-[#7c1c2e] text-sm transition-colors"
-                      />
+              {horarioSelecionado && (
+                <div key="resumo" ref={resumoRef} className="animate-fade-slide">
+                  <Divisor />
+                  <p className="text-[#2d3b2d]/60 text-xs font-bold uppercase tracking-wider mb-3">
+                    Resumo
+                  </p>
+                  <div className="bg-[#2d3b2d] rounded-xl p-4 text-white text-sm space-y-1.5 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Scissors size={14} className="text-white/50 flex-shrink-0" />
+                      <span className="font-semibold">{servico.nome}</span>
                     </div>
-                    <div>
-                      <label className="text-[#2d3b2d]/60 text-xs font-semibold block mb-1.5">
-                        Telefone:
-                      </label>
-                      <input
-                        type="tel"
-                        value={clienteTelefone}
-                        onChange={(e) => setClienteTelefone(formatarTelefone(e.target.value))}
-                        placeholder="(99) 99999-9999"
-                        className="w-full px-3 py-2.5 rounded-xl border-2 border-[#d5cfc4] bg-white text-[#2d3b2d] placeholder-[#2d3b2d]/30 focus:outline-none focus:border-[#7c1c2e] text-sm transition-colors"
-                      />
+                    <div className="flex items-center gap-2">
+                      <User size={14} className="text-white/50 flex-shrink-0" />
+                      <span className="font-semibold">Profissional {barbeiroSelecionado}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar size={14} className="text-white/50 flex-shrink-0" />
+                      <span className="font-semibold">{formatarDataExibicao(dataSelecionada)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock size={14} className="text-white/50 flex-shrink-0" />
+                      <span className="font-semibold">{horarioSelecionado}</span>
                     </div>
                   </div>
 
-                  {erro && (
-                    <p className="text-red-600 text-xs font-medium">{erro}</p>
-                  )}
+                  {/* Campos */}
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="text-[#2d3b2d]/60 text-xs font-semibold block mb-1.5">
+                          Nome e sobrenome:
+                        </label>
+                        <input
+                          type="text"
+                          value={clienteNome}
+                          onChange={(e) => setClienteNome(e.target.value)}
+                          placeholder="Nome e sobrenome"
+                          className="w-full px-3 py-2.5 rounded-xl border-2 border-[#d5cfc4] bg-white text-[#2d3b2d] placeholder-[#2d3b2d]/30 focus:outline-none focus:border-[#7c1c2e] text-sm transition-colors"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[#2d3b2d]/60 text-xs font-semibold block mb-1.5">
+                          Telefone:
+                        </label>
+                        <input
+                          type="tel"
+                          value={clienteTelefone}
+                          onChange={(e) => setClienteTelefone(formatarTelefone(e.target.value))}
+                          placeholder="(99) 99999-9999"
+                          className="w-full px-3 py-2.5 rounded-xl border-2 border-[#d5cfc4] bg-white text-[#2d3b2d] placeholder-[#2d3b2d]/30 focus:outline-none focus:border-[#7c1c2e] text-sm transition-colors"
+                        />
+                      </div>
+                    </div>
 
-                  <button
-                    onClick={handleAgendar}
-                    disabled={agendando || !podeAgendar}
-                    className={`w-full py-3.5 rounded-xl font-bold text-white text-base transition-all duration-200 flex items-center justify-center gap-2 ${
-                      podeAgendar && !agendando
-                        ? 'bg-[#7c1c2e] hover:bg-[#9b2239] active:scale-[0.98]'
-                        : 'bg-[#7c1c2e]/30 cursor-not-allowed'
-                    }`}
-                  >
-                    {agendando ? (
-                      <>
-                        <Loader2 size={20} className="animate-spin" />
-                        Agendando...
-                      </>
-                    ) : (
-                      'AGENDAR'
+                    {erro && (
+                      <p className="text-red-600 text-xs font-medium">{erro}</p>
                     )}
-                  </button>
+
+                    <button
+                      onClick={handleAgendar}
+                      disabled={agendando || !podeAgendar}
+                      className={`w-full py-3.5 rounded-xl font-bold text-white text-base transition-all duration-200 flex items-center justify-center gap-2 ${
+                        podeAgendar && !agendando
+                          ? 'bg-[#7c1c2e] hover:bg-[#9b2239] active:scale-[0.98]'
+                          : 'bg-[#7c1c2e]/30 cursor-not-allowed'
+                      }`}
+                    >
+                      {agendando ? (
+                        <>
+                          <Loader2 size={20} className="animate-spin" />
+                          Agendando...
+                        </>
+                      ) : (
+                        'AGENDAR'
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>
       </div>
     </div>
   )
+}
+
+/* ─── Divisor visual entre seções ──────────────────────────────────────── */
+function Divisor() {
+  return <div className="border-t border-[#d5cfc4] -mx-5 mb-5" />
 }
 
 /* ─── Tela de Sucesso ───────────────────────────────────────────────────── */
